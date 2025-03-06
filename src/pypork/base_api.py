@@ -12,7 +12,7 @@ class PorkbunAPI:
     """
     A Python client for interacting with the Porkbun API.
 
-    API Documentation: https://porkbun.com/api/json/v3/
+    API Documentation: https://porkbun.com/api/json/v3/documentation
 
     All API calls require valid API keys, which can be created at:
     https://porkbun.com/account/api
