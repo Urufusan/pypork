@@ -7,6 +7,13 @@ __license__ = "AGPL-3.0-or-later"
 
 import requests
 
+class PorkbunError(Exception):
+    def __init__(self, message):
+        if "record" in message:
+            message += f"\nSupported record types: {' '.join(PorkbunAPI.ALLOWEDTYPES)}"
+        elif "priority":
+            message += f"\nSupported priority types: {' '.join(PorkbunAPI.ALLOWEDTYPES_PRIO)}"
+        super().__init__(message)
 
 class PorkbunAPI:
     """
@@ -19,6 +26,9 @@ class PorkbunAPI:
     """
 
     BASE_URL = "https://api.porkbun.com/api/json/v3"
+    V4ONLYPINGURI = "https://api-ipv4.porkbun.com/api/json/v3/ping"
+    ALLOWEDTYPES = ["A", "MX", "CNAME", "ALIAS", "TXT", "NS", "AAAA", "SRV", "TLSA", "CAA"]
+    ALLOWEDTYPES_PRIO = ["SRV", "MX"]
 
     def set_domain(_method):
         """Sets the default domain, defined in ``__init__``, for all functions that use it"""
@@ -66,13 +76,18 @@ class PorkbunAPI:
         response = requests.post(url, json=payload)
         return response.json()
 
-    def ping(self) -> dict:
+    def ping(self, ipv4only: bool = True) -> dict:
         """
         Test communication with the Porkbun API.
 
+        :param ipv4only: Whether to use IPv4 only (default: True).
         :return: JSON response with API status and your public IP.
         """
-        return self._post("ping")
+        endpoint = "ping" if not ipv4only else "ping"
+        url = f"{self.V4ONLYPINGURI if ipv4only else self.BASE_URL}/{endpoint}"
+        payload = {"apikey": self.api_key, "secretapikey": self.secret_key}
+        response = requests.post(url, json=payload)
+        return response.json()
 
     def get_domain_pricing(self) -> dict:
         """
@@ -136,8 +151,13 @@ class PorkbunAPI:
         :param prio: Priority for records like MX (optional).
         :return: JSON dict with the created record ID.
         """
+        record_type = record_type.upper()
+        if record_type not in self.ALLOWEDTYPES:
+            raise PorkbunError(f"Type {record_type} is not a valid record type supported by Porkbun")
         data = {"name": name, "type": record_type, "content": content, "ttl": str(ttl)}
         if prio:
+            if record_type not in self.ALLOWEDTYPES_PRIO:
+                raise PorkbunError(f"Your request type {record_type} does not support priority")
             data["prio"] = str(prio)
         return self._post(f"dns/create/{domain}", data)
 
@@ -165,8 +185,13 @@ class PorkbunAPI:
         :param prio: Priority (for MX records, optional).
         :return: JSON dict with update status.
         """
+        record_type = record_type.upper()
+        if record_type not in self.ALLOWEDTYPES:
+            raise PorkbunError(f"Type {record_type} is not a valid record type supported by Porkbun")
         data = {"name": name, "type": record_type, "content": content, "ttl": str(ttl)}
         if prio:
+            if record_type not in self.ALLOWEDTYPES_PRIO:
+                raise PorkbunError(f"Your request type {record_type} does not support priority")
             data["prio"] = str(prio)
         return self._post(f"dns/edit/{domain}/{record_id}", data)
 
@@ -196,8 +221,13 @@ class PorkbunAPI:
         :param prio: Priority for records like MX (optional).
         :return: JSON dict with update status.
         """
+        record_type = record_type.upper()
+        if record_type not in self.ALLOWEDTYPES:
+            raise PorkbunError(f"Type {record_type} is not a valid record type supported by Porkbun")
         data = {"content": content, "ttl": str(ttl)}
         if prio:
+            if record_type not in self.ALLOWEDTYPES_PRIO:
+                raise PorkbunError(f"Your request type {record_type} does not support priority")
             data["prio"] = str(prio)
         return self._post(f"dns/editByNameType/{domain}/{record_type}/{subdomain}", data)
 
@@ -211,6 +241,9 @@ class PorkbunAPI:
         :param subdomain: The subdomain for the record (default: root).
         :return: JSON dict containing the DNS records.
         """
+        record_type = record_type.upper()
+        if record_type not in self.ALLOWEDTYPES:
+            raise PorkbunError(f"Type {record_type} is not a valid record type supported by Porkbun")
         return self._post(f"dns/retrieveByNameType/{domain}/{record_type}/{subdomain}")
 
     @set_domain
@@ -223,6 +256,9 @@ class PorkbunAPI:
         :param subdomain: The subdomain for the record (default: root).
         :return: JSON dict with deletion status.
         """
+        record_type = record_type.upper()
+        if record_type not in self.ALLOWEDTYPES:
+            raise PorkbunError(f"Type {record_type} is not a valid record type supported by Porkbun")
         return self._post(f"dns/deleteByNameType/{domain}/{record_type}/{subdomain}")
 
     @set_domain
@@ -286,9 +322,9 @@ class PorkbunAPI:
         if ip:
             ipaddr = ip
         else:
-            ipaddr = self.ping()["yourIp"]
+            ipaddr = self.ping(ipv4only=ipv4only)["yourIp"]
         record_type = "A" if ipv4only or ":" not in ipaddr else "AAAA"
-        return self.update_dns_record_by_name_type(domain, record_type, ipaddr, subdomain)
+        return self.edit_dns_record_by_name_type(domain, record_type, ipaddr, subdomain)
 
     @set_domain
     def create_dnssec_record(
