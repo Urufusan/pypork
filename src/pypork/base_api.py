@@ -182,6 +182,50 @@ class PorkbunAPI:
         return self._post(f"dns/delete/{domain}/{record_id}")
 
     @set_domain
+    def edit_dns_record_by_name_type(
+        self, domain: str, record_type: str, content: str, subdomain: str = "", ttl: int = 600, prio: int = None
+    ) -> dict:
+        """
+        Edit DNS records by name and type.
+
+        :param domain: The domain name.
+        :param record_type: The type of DNS record (A, MX, CNAME, etc.).
+        :param content: The updated content of the record.
+        :param subdomain: The subdomain for the record (default: root).
+        :param ttl: Time-to-live in seconds (default: 600).
+        :param prio: Priority for records like MX (optional).
+        :return: JSON dict with update status.
+        """
+        data = {"content": content, "ttl": str(ttl)}
+        if prio:
+            data["prio"] = str(prio)
+        return self._post(f"dns/editByNameType/{domain}/{record_type}/{subdomain}", data)
+
+    @set_domain
+    def get_dns_records_by_name_type(self, domain: str, record_type: str, subdomain: str = "") -> dict:
+        """
+        Retrieve DNS records by name and type.
+
+        :param domain: The domain name.
+        :param record_type: The type of DNS record (A, MX, CNAME, etc.).
+        :param subdomain: The subdomain for the record (default: root).
+        :return: JSON dict containing the DNS records.
+        """
+        return self._post(f"dns/retrieveByNameType/{domain}/{record_type}/{subdomain}")
+
+    @set_domain
+    def delete_dns_record_by_name_type(self, domain: str, record_type: str, subdomain: str = "") -> dict:
+        """
+        Delete DNS records by name and type.
+
+        :param domain: The domain name.
+        :param record_type: The type of DNS record (A, MX, CNAME, etc.).
+        :param subdomain: The subdomain for the record (default: root).
+        :return: JSON dict with deletion status.
+        """
+        return self._post(f"dns/deleteByNameType/{domain}/{record_type}/{subdomain}")
+
+    @set_domain
     def add_url_forwarding(
         self, domain: str, location: str, forward_type: str = "temporary", subdomain: str = "", include_path: bool = False, wildcard: bool = True
     ) -> dict:
@@ -227,3 +271,94 @@ class PorkbunAPI:
         :return: JSON dict with deletion status.
         """
         return self._post(f"domain/deleteUrlForward/{domain}/{record_id}")
+
+    @set_domain
+    def ddns_update(self, domain: str, ip: str = "", subdomain: str = "", ipv4only: bool = True) -> dict:
+        """
+        Update a dynamic DNS record.
+
+        :param domain: The domain name.
+        :param ip: The IP address to update (optional).
+        :param subdomain: The subdomain for the record (default: root).
+        :param ipv4only: Whether to use IPv4 only (default: True).
+        :return: JSON dict with update status.
+        """
+        if ip:
+            ipaddr = ip
+        else:
+            ipaddr = self.ping()["yourIp"]
+        record_type = "A" if ipv4only or ":" not in ipaddr else "AAAA"
+        return self.update_dns_record_by_name_type(domain, record_type, ipaddr, subdomain)
+
+    @set_domain
+    def create_dnssec_record(
+        self,
+        domain: str,
+        key_tag: str,
+        alg: str,
+        digest_type: str,
+        digest: str,
+        max_sig_life: str = "",
+        key_data_flags: str = "",
+        key_data_protocol: str = "",
+        key_data_algo: str = "",
+        key_data_pub_key: str = "",
+    ) -> dict:
+        """
+        Create a DNSSEC record at the registry.
+
+        :param domain: The domain name.
+        :param key_tag: Key Tag.
+        :param alg: DS Data Algorithm.
+        :param digest_type: Digest Type.
+        :param digest: Digest.
+        :param max_sig_life: Max Sig Life (optional).
+        :param key_data_flags: Key Data Flags (optional).
+        :param key_data_protocol: Key Data Protocol (optional).
+        :param key_data_algo: Key Data Algorithm (optional).
+        :param key_data_pub_key: Key Data Public Key (optional).
+        :return: JSON dict containing the creation status.
+        """
+        data = {
+            "keyTag": key_tag,
+            "alg": alg,
+            "digestType": digest_type,
+            "digest": digest,
+            "maxSigLife": max_sig_life,
+            "keyDataFlags": key_data_flags,
+            "keyDataProtocol": key_data_protocol,
+            "keyDataAlgo": key_data_algo,
+            "keyDataPubKey": key_data_pub_key,
+        }
+        return self._post(f"dns/createDnssecRecord/{domain}", data)
+
+    @set_domain
+    def get_dnssec_records(self, domain: str) -> dict:
+        """
+        Get the DNSSEC records associated with the domain at the registry.
+
+        :param domain: The domain name.
+        :return: JSON dict containing the DNSSEC records.
+        """
+        return self._post(f"dns/getDnssecRecords/{domain}")
+
+    @set_domain
+    def delete_dnssec_record(self, domain: str, key_tag: str) -> dict:
+        """
+        Delete a DNSSEC record associated with the domain at the registry.
+
+        :param domain: The domain name.
+        :param key_tag: The Key Tag of the record to delete.
+        :return: JSON dict containing the deletion status.
+        """
+        return self._post(f"dns/deleteDnssecRecord/{domain}/{key_tag}")
+
+    @set_domain
+    def retrieve_ssl_bundle(self, domain: str) -> dict:
+        """
+        Retrieve the SSL certificate bundle for the domain.
+
+        :param domain: The domain name.
+        :return: JSON dict containing the SSL certificate bundle.
+        """
+        return self._post(f"ssl/retrieve/{domain}")
