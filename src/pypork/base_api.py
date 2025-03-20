@@ -7,6 +7,7 @@ __license__ = "AGPL-3.0-or-later"
 
 import requests
 
+
 class PorkbunError(Exception):
     def __init__(self, message):
         if "record" in message:
@@ -14,6 +15,7 @@ class PorkbunError(Exception):
         elif "priority":
             message += f"\nSupported record types with priority: {', '.join(PorkbunAPI.ALLOWEDTYPES_PRIO)}"
         super().__init__(message)
+
 
 class PorkbunAPI:
     """
@@ -26,7 +28,7 @@ class PorkbunAPI:
     """
 
     BASE_URL = "https://api.porkbun.com/api/json/v3"
-    V4ONLYPINGURI = "https://api-ipv4.porkbun.com/api/json/v3/ping"
+    V4ONLYPINGURI = "https://api-ipv4.porkbun.com/api/json/v3"
     ALLOWEDTYPES = ["A", "MX", "CNAME", "ALIAS", "TXT", "NS", "AAAA", "SRV", "TLSA", "CAA"]
     ALLOWEDTYPES_PRIO = ["SRV", "MX"]
 
@@ -76,15 +78,14 @@ class PorkbunAPI:
         response = requests.post(url, json=payload)
         return response.json()
 
-    def ping(self, ipv4only: bool = True) -> dict:
+    def ping(self, ipv4only: bool = False) -> dict:
         """
         Test communication with the Porkbun API.
 
-        :param ipv4only: Whether to use IPv4 only (default: True).
+        :param ipv4only: Whether to use IPv4 only (default: False).
         :return: JSON response with API status and your public IP.
         """
-        endpoint = "ping" if not ipv4only else "ping"
-        url = f"{self.V4ONLYPINGURI if ipv4only else self.BASE_URL}/{endpoint}"
+        url = f"{self.V4ONLYPINGURI if ipv4only else self.BASE_URL}/ping"
         payload = {"apikey": self.api_key, "secretapikey": self.secret_key}
         response = requests.post(url, json=payload)
         return response.json()
