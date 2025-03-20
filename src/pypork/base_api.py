@@ -29,7 +29,7 @@ class PorkbunAPI:
 
     BASE_URL = "https://api.porkbun.com/api/json/v3"
     V4ONLYPINGURI = "https://api-ipv4.porkbun.com/api/json/v3"
-    ALLOWEDTYPES = ["A", "MX", "CNAME", "ALIAS", "TXT", "NS", "AAAA", "SRV", "TLSA", "CAA"]
+    ALLOWEDTYPES = ["A", "MX", "CNAME", "ALIAS", "TXT", "NS", "AAAA", "SRV", "TLSA", "CAA", "SVCB", "HTTPS"]
     ALLOWEDTYPES_PRIO = ["SRV", "MX"]
 
     def set_domain(_method):
