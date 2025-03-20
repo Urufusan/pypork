@@ -10,9 +10,9 @@ import requests
 class PorkbunError(Exception):
     def __init__(self, message):
         if "record" in message:
-            message += f"\nSupported record types: {' '.join(PorkbunAPI.ALLOWEDTYPES)}"
+            message += f"\nSupported record types: {', '.join(PorkbunAPI.ALLOWEDTYPES)}"
         elif "priority":
-            message += f"\nSupported priority types: {' '.join(PorkbunAPI.ALLOWEDTYPES_PRIO)}"
+            message += f"\nSupported record types with priority: {', '.join(PorkbunAPI.ALLOWEDTYPES_PRIO)}"
         super().__init__(message)
 
 class PorkbunAPI:
